@@ -117,6 +117,28 @@ export abstract class InvoiceItem extends Doc {
     }, 0);
   }
 
+  _manualRate?: Money;
+
+  override async set(
+    fieldname: string | DocValueMap,
+    value?: DocValue | Doc[] | DocValueMap[],
+    retriggerChildDocApplyChange = false
+  ): Promise<boolean> {
+    if (
+      typeof fieldname === 'string' &&
+      fieldname === 'rate' &&
+      isPesa(value)
+    ) {
+      this._manualRate = value;
+    }
+
+    return await super.set(
+      fieldname,
+      value as DocValue | Doc[],
+      retriggerChildDocApplyChange
+    );
+  }
+
   formulas: FormulaMap = {
     description: {
       formula: async () =>
@@ -129,6 +151,10 @@ export abstract class InvoiceItem extends Doc {
     },
     rate: {
       formula: async (fieldname) => {
+        if (this._manualRate) {
+          return this._manualRate;
+        }
+
         const rate = await getItemRate(this);
         if (!rate?.float && this.rate?.float) {
           return this.rate;
